@@ -36,17 +36,9 @@ function receivesillycatz(number)
     list = gui:vlist(win4, 20, 76, 280, 320)
     sillycats = 0
     for i, message in pairs(messages) do
-        local numberPart = message.message:match("/(%d+)%.jpg")
-
-        if(numberPart) then -- TODO: modify so that this unexists
-            print("new image just dropped")
-        else
-            if message.message == "3PMSCA:sillycat" then -- merge these two ifs together
-                if message.who == true then -- merge these two ifs together
-                    print("yipe")
-                    sillycats = sillycats + 1
-                end
-            end
+        if not message.message:match("/(%d+)%.jpg") and message.message == "3PMSCA:sillycat" and message.who == true then
+            print("yipe")
+            sillycats = sillycats + 1
         end
     end
 
