@@ -32,8 +32,6 @@ function receivesillycatz(number)
     win4=gui:window()
 
     messages = gsm.getMessages(number)
-
-    list = gui:vlist(win4, 20, 76, 280, 320)
     sillycats = 0
     for i, message in pairs(messages) do
         if not message.message:match("/(%d+)%.jpg") and message.message == "3PMSCA:sillycat" and message.who == true then
@@ -41,8 +39,6 @@ function receivesillycatz(number)
             sillycats = sillycats + 1
         end
     end
-
-    
 
     if sillycats == 0 then
         print("no silly cats ;(")
@@ -92,6 +88,37 @@ function receivethesillycats()
     gui:setWindow(win3)
 end
 
+function pictures()
+    win5=gui:window()
+    
+    local title=gui:label(win5, 10, 10, 288, 28)
+    title:setFontSize(17)
+    title:setText("pictures")
+    local list = storage:listDir("../../pictures/")
+    local pathlist = {}
+    local shownwarning = false
+    for i, item in ipairs(list) do
+        itempath = "../../pictures/"..item
+        if storage:isDir(itempath) then
+            if not shownwarning then
+                shownwarning = true
+                gui:showWarningMessage("Albums are not supported yet")
+            end
+            print(itempath..": directory")
+        elseif storage:isFile(itempath) then
+            print(itempath..": file")
+            table.insert(pathlist, itempath)
+        else
+            gui:showErrorMessage("Error fetching pictures.")
+        end
+    end
+    list2 = gui:vlist(win5, 10, 35, 250, 410)
+    for i, path in ipairs(pathlist) do
+        local image = gui:image(list2, path, 10, 25, 250, 250)
+    end
+    gui:setWindow(win5)
+end
+
 function run()
     win=gui:window()
     
@@ -99,7 +126,6 @@ function run()
     title:setFontSize(20)
     title:setText("3pm's custom app")
     local marketable = gui:image(win, "icon.png", 230, 0, 100, 100)
-    
     
     local sendsillycat = gui:label(win, 10, 50, 144, 20)
     sendsillycat:setFontSize(20)
@@ -110,6 +136,11 @@ function run()
     receivesillycats:setFontSize(20)
     receivesillycats:setText("receive silly cats")
     receivesillycats:onClick(function() receivethesillycats() end)
+
+    local pictureviewer = gui:label(win, 10, 100, 144, 20)
+    pictureviewer:setFontSize(20)
+    pictureviewer:setText("picture viewer")
+    pictureviewer:onClick(function() pictures() end)
 
     local madewithheart=gui:label(win, 10, 455, 200, 15)
     madewithheart:setFontSize(15)
