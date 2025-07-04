@@ -42,6 +42,8 @@ function receivesillycatz(number)
         end
     end
 
+    
+
     if sillycats == 0 then
         print("no silly cats ;(")
         local title=gui:label(win4, 10, 10, 288, 28)
@@ -52,6 +54,11 @@ function receivesillycatz(number)
         local title=gui:label(win4, 10, 10, 288, 28)
         title:setFontSize(15)
         title:setText("you received "..sillycats.." silly cats in total")
+        list1 = gui:vlist(win4, 10, 35, 250, 360)
+        for i = 1, sillycats do
+            print("silly cat")
+            local sillycat = gui:image(list1, "sillycat.png", 10, 2, 100, 100)
+        end
     end
 
     gui:setWindow(win4)
