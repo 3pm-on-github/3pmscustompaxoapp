@@ -175,7 +175,6 @@ function readebook(bookpath)
     
     local ebooklinecount = 2 -- start at 2 to count the title & ram usage estimation
     for i, ebookline in ipairs(ebooklinelist) do
-        print(ebookline)
         ebooklinecount = ebooklinecount + 1
         local content = gui:label(list4, 0, 0, 290, 18)
         content:setText(ebookline)
