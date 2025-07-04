@@ -112,11 +112,120 @@ function pictures()
             gui:showErrorMessage("Error fetching pictures.")
         end
     end
-    list2 = gui:vlist(win5, 10, 35, 250, 410)
+    list2 = gui:vlist(win5, 10, 35, 290, 433)
     for i, path in ipairs(pathlist) do
-        local image = gui:image(list2, path, 10, 25, 250, 250)
+        local image = gui:image(list2, path, 10, 25, 290, 290)
     end
     gui:setWindow(win5)
+end
+
+function readebook(bookpath)
+    win7=gui:window()
+    
+    local ebooknamelinelist = {}
+    local currentline = ""
+    local characteri = 0 -- 25 characters max per line
+    for i = 1, #string.sub(bookpath,14,#bookpath-4) do
+        characteri = characteri + 1
+        local char = string.sub(string.sub(bookpath,14,#bookpath-4), i, i)
+        if characteri == 27 then
+            table.insert(ebooknamelinelist, currentline)
+            currentline = char
+            characteri = 1
+        else
+            currentline = currentline..char
+        end
+    end
+    if currentline ~= "" then
+        table.insert(ebooknamelinelist, currentline)
+    end
+    list4 = gui:vlist(win7, 10, 10, 290, 410)
+    for i, ebooknameline in ipairs(ebooknamelinelist) do
+        local title=gui:label(list4, 0, 0, 290, 25)
+        title:setFontSize(25)
+        title:setText(ebooknameline)
+    end
+
+    local ebook = storage:file(bookpath, 0)
+    ebook:open()
+    local ebookcontent = ebook:readAll()
+    ebook:close()
+
+    local ebooklinelist = {}
+    local currentline = ""
+    local characteri = 0 -- 42 characters max per line
+    for i = 1, #ebookcontent do
+        characteri = characteri + 1
+        local char = string.sub(ebookcontent, i, i)
+        if characteri == 43 then
+            table.insert(ebooklinelist, currentline)
+            currentline = char
+            characteri = 1
+        elseif char == "\n" or characteri == 43 then
+            table.insert(ebooklinelist, currentline)
+            currentline = ""
+            characteri = 0
+        else
+            currentline = currentline..char
+        end
+    end
+    if currentline ~= "" then
+        table.insert(ebooknamelinelist, currentline)
+    end
+    
+    local ebooklinecount = 2 -- start at 2 to count the title & ram usage estimation
+    for i, ebookline in ipairs(ebooklinelist) do
+        print(ebookline)
+        ebooklinecount = ebooklinecount + 1
+        local content = gui:label(list4, 0, 0, 290, 18)
+        content:setText(ebookline)
+        content:setFontSize(16)
+    end
+
+    local estimatedramusage = ebooklinecount * 2
+    local estimatedrampercentageusage = estimatedramusage / 40000
+    local estimatedusage = gui:label(win7, 0, 430, 290, 18)
+    estimatedusage:setText("estimated "..estimatedramusage.."bytes of ram used ("..estimatedrampercentageusage.."%)")
+    estimatedusage:setFontSize(13)
+
+    gui:setWindow(win7)
+end
+
+function ebooks()
+    win6=gui:window()
+    
+    gui:showWarningMessage("Big e-books aren't supported yet. Make sure to use small e-books of around 5kb.")
+    local title=gui:label(win6, 10, 10, 288, 28)
+    title:setFontSize(17)
+    title:setText("e-books")
+    local list = storage:listDir("../../ebooks/")
+    local pathlist = {}
+    local shownwarning = false
+    for i, item in ipairs(list) do
+        itempath = "../../ebooks/"..item
+        if storage:isDir(itempath) then
+            if not shownwarning then
+                shownwarning = true
+                gui:showWarningMessage("E-Book Bookshelves are not supported yet")
+            end
+            print(itempath..": directory")
+        elseif storage:isFile(itempath) then
+            print(itempath..": file")
+            table.insert(pathlist, itempath)
+        else
+            gui:showErrorMessage("Error fetching e-books.")
+        end
+    end
+    list3 = gui:vlist(win6, 10, 90, 250, 280)
+    for i, bookpath in ipairs(pathlist) do
+        bookname = string.sub(bookpath,14,#bookpath-4)
+        local case = gui:box(list3, 0, 0, 250, 18)
+        local name = gui:label(case, 0, 0, 230, 18)
+        name:setText(bookname)
+        name:setFontSize(16)
+        case:onClick(function() readebook(bookpath) end)
+    end
+    gui:setWindow(win6)
 end
 
 function run()
@@ -141,6 +250,11 @@ function run()
     pictureviewer:setFontSize(20)
     pictureviewer:setText("picture viewer")
     pictureviewer:onClick(function() pictures() end)
+
+    local ebookreader = gui:label(win, 10, 125, 144, 20)
+    ebookreader:setFontSize(20)
+    ebookreader:setText("e-book reader")
+    ebookreader:onClick(function() ebooks() end)
 
     local madewithheart=gui:label(win, 10, 455, 200, 15)
     madewithheart:setFontSize(15)
