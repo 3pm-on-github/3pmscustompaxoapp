@@ -291,7 +291,7 @@ end
 function run()
     win=gui:window()
     
-    local title=gui:label(win, 10, 10, 144, 28)
+    local title=gui:label(win, 10, 10, 250, 28)
     title:setFontSize(20)
     title:setText("3pm's random stuff")
     local marketable = gui:image(win, "icon.png", 230, 0, 100, 100)
