@@ -122,9 +122,10 @@ end
 function readebook(bookpath)
     win7=gui:window()
     
+    local starttime = time:monotonic()
     local ebooknamelinelist = {}
     local currentline = ""
-    local characteri = 0 -- 25 characters max per line
+    local characteri = 0 -- 26 characters max per line
     for i = 1, #string.sub(bookpath,14,#bookpath-4) do
         characteri = characteri + 1
         local char = string.sub(string.sub(bookpath,14,#bookpath-4), i, i)
@@ -140,7 +141,9 @@ function readebook(bookpath)
         table.insert(ebooknamelinelist, currentline)
     end
     list4 = gui:vlist(win7, 10, 10, 290, 410)
+    local ebooknamelinecount = 0
     for i, ebooknameline in ipairs(ebooknamelinelist) do
+        ebooknamelinecount = ebooknamelinecount + 1
         local title=gui:label(list4, 0, 0, 290, 25)
         title:setFontSize(25)
         title:setText(ebooknameline)
@@ -161,7 +164,7 @@ function readebook(bookpath)
             table.insert(ebooklinelist, currentline)
             currentline = char
             characteri = 1
-        elseif char == "\n" or characteri == 43 then
+        elseif char == "\n" then
             table.insert(ebooklinelist, currentline)
             currentline = ""
             characteri = 0
@@ -173,7 +176,7 @@ function readebook(bookpath)
         table.insert(ebooknamelinelist, currentline)
     end
     
-    local ebooklinecount = 2 -- start at 2 to count the title & ram usage estimation
+    local ebooklinecount = 0
     for i, ebookline in ipairs(ebooklinelist) do
         ebooklinecount = ebooklinecount + 1
         local content = gui:label(list4, 0, 0, 290, 18)
@@ -181,19 +184,77 @@ function readebook(bookpath)
         content:setFontSize(16)
     end
 
-    local estimatedramusage = ebooklinecount * 2
+    local totaltime = (time:monotonic() - starttime) / 1000
+
+    local estimatedramusage = (ebooklinecount + ebooknamelinecount + 4) * 2 -- add + 4 to include the ram usage & vlist (it counts as an object)
     local estimatedrampercentageusage = estimatedramusage / 40000
     local estimatedusage = gui:label(win7, 0, 430, 290, 18)
     estimatedusage:setText("estimated "..estimatedramusage.."bytes of ram used ("..estimatedrampercentageusage.."%)")
     estimatedusage:setFontSize(13)
+    local loadedtime = gui:label(win7, 0, 443, 290, 18)
+    loadedtime:setText("loaded in "..totaltime.."s")
+    loadedtime:setFontSize(13)
 
     gui:setWindow(win7)
 end
 
-function ebooks()
-    win6=gui:window()
+function estimateramusage(bookpath)
+    win8=gui:window()
     
-    gui:showWarningMessage("Big e-books aren't supported yet. Make sure to use small e-books of around 5kb.")
+    local starttime = time:monotonic()
+    local ebooknamelinecount = 0
+    local currentline = ""
+    local characteri = 0 -- 26 characters max per line
+    for i = 1, #string.sub(bookpath,14,#bookpath-4) do
+        characteri = characteri + 1
+        if characteri == 27 then
+            ebooknamelinecount = ebooknamelinecount + 1
+            characteri = 1
+        end
+    end
+    if currentline ~= "" then
+        ebooknamelinecount = ebooknamelinecount + 1
+    end
+
+    local ebook = storage:file(bookpath, 0)
+    ebook:open()
+    local ebookcontent = ebook:readAll()
+    ebook:close()
+
+    local characteri = 0 -- 42 characters max per line
+    local ebooklinecount = 0
+    for i = 1, #ebookcontent do
+        characteri = characteri + 1
+        if characteri == 43 then
+            characteri = 1
+            ebooklinecount = ebooklinecount + 1
+        elseif char == "\n" then
+            characteri = 0
+            ebooklinecount = ebooklinecount + 1
+        end
+    end
+    if currentline ~= "" then
+        table.insert(ebooknamelinelist, currentline)
+    end
+    local totaltime = (time:monotonic() - starttime) / 1000
+    local estimatedramusage = (ebooklinecount + ebooknamelinecount + 4) * 2 -- add + 4 to include the ram usage & vlist (it counts as an object)
+    local estimatedrampercentageusage = estimatedramusage / 40000
+    local estimatedusage = gui:label(win8, 10, 10, 360, 18)
+    estimatedusage:setText("estimated "..estimatedramusage.."bytes of ram will be used ("..estimatedrampercentageusage.."%)")
+    estimatedusage:setFontSize(13)
+    local loadedtime = gui:label(win8, 10, 23, 290, 18)
+    loadedtime:setText("estimated in "..totaltime.."s")
+    loadedtime:setFontSize(13)
+
+    gui:setWindow(win8)
+end
+
+
+function ebooks(estimateram)
+    win6=gui:window()
+    gui:showWarningMessage("E-books that use >3056B of ram usage aren't supported yet.")
+    gui:showWarningMessage("Make sure to use small e-books that use around 3056B or less.")
+    gui:showWarningMessage("Using e-books that use larger than 3056B will make the phone lag(>100kb) and the reader glitch.")
     local title=gui:label(win6, 10, 10, 288, 28)
     title:setFontSize(17)
     title:setText("e-books")
@@ -222,7 +283,7 @@ function ebooks()
         local name = gui:label(case, 0, 0, 230, 18)
         name:setText(bookname)
         name:setFontSize(16)
-        case:onClick(function() readebook(bookpath) end)
+        case:onClick(function() if estimateram==0 then readebook(bookpath) else estimateramusage(bookpath) end end)
     end
     gui:setWindow(win6)
 end
@@ -232,7 +293,7 @@ function run()
     
     local title=gui:label(win, 10, 10, 144, 28)
     title:setFontSize(20)
-    title:setText("3pm's custom app")
+    title:setText("3pm's random stuff")
     local marketable = gui:image(win, "icon.png", 230, 0, 100, 100)
     
     local sendsillycat = gui:label(win, 10, 50, 144, 20)
@@ -253,7 +314,12 @@ function run()
     local ebookreader = gui:label(win, 10, 125, 144, 20)
     ebookreader:setFontSize(20)
     ebookreader:setText("e-book reader")
-    ebookreader:onClick(function() ebooks() end)
+    ebookreader:onClick(function() ebooks(0) end)
+
+    local ebookramusage = gui:label(win, 10, 150, 260, 20)
+    ebookramusage:setFontSize(20)
+    ebookramusage:setText("e-book ram usage estimater")
+    ebookramusage:onClick(function() ebooks(1) end)
 
     local madewithheart=gui:label(win, 10, 455, 200, 15)
     madewithheart:setFontSize(15)

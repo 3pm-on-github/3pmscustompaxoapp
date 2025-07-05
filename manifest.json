@@ -1,4 +1,4 @@
 {
-    "access": ["files", "gsm", "gui"],
-    "name": "3pm's custom app"
+    "access": ["files", "gsm", "gui", "time"],
+    "name": "3pm's random stuff"
 }
