@@ -119,74 +119,84 @@ function pictures()
     gui:setWindow(win5)
 end
 
-function readebook(bookpath)
+function readebook(bookpath, page)
     win7=gui:window()
+
+    local titleList = gui:vlist(win7, 10, 40, 290, 390)
+    local ebookname = string.sub(bookpath, 14, #bookpath - 4)
+    local label = gui:label(titleList, 10, 10, 290, 25)
+    label:setFontSize(22)
+    label:setText(ebookname)
     
     local starttime = time:monotonic()
-    local ebooknamelinelist = {}
-    local currentline = ""
-    local characteri = 0 -- 26 characters max per line
-    for i = 1, #string.sub(bookpath,14,#bookpath-4) do
-        characteri = characteri + 1
-        local char = string.sub(string.sub(bookpath,14,#bookpath-4), i, i)
-        if characteri == 27 then
-            table.insert(ebooknamelinelist, currentline)
-            currentline = char
-            characteri = 1
-        else
-            currentline = currentline..char
-        end
-    end
-    if currentline ~= "" then
-        table.insert(ebooknamelinelist, currentline)
-    end
-    list4 = gui:vlist(win7, 10, 10, 290, 410)
-    local ebooknamelinecount = 0
-    for i, ebooknameline in ipairs(ebooknamelinelist) do
-        ebooknamelinecount = ebooknamelinecount + 1
-        local title=gui:label(list4, 0, 0, 290, 25)
-        title:setFontSize(25)
-        title:setText(ebooknameline)
-    end
 
     local ebook = storage:file(bookpath, 0)
     ebook:open()
     local ebookcontent = ebook:readAll()
     ebook:close()
 
-    local ebooklinelist = {}
-    local currentline = ""
-    local characteri = 0 -- 42 characters max per line
-    for i = 1, #ebookcontent do
-        characteri = characteri + 1
-        local char = string.sub(ebookcontent, i, i)
-        if characteri == 43 then
-            table.insert(ebooklinelist, currentline)
-            currentline = char
-            characteri = 1
-        elseif char == "\n" then
-            table.insert(ebooklinelist, currentline)
-            currentline = ""
-            characteri = 0
-        else
-            currentline = currentline..char
+    -- Word wrap à 42 caractères max, en coupant aux espaces
+    local function split_text_by_word(text, max_chars)
+        local lines = {}
+        local line = ""
+
+        for word in text:gmatch("%S+") do
+            if #line + #word + 1 <= max_chars then
+                if line == "" then
+                    line = word
+                else
+                    line = line .. " " .. word
+                end
+            else
+                table.insert(lines, line)
+                line = word
+            end
+        end
+
+        if line ~= "" then
+            table.insert(lines, line)
+        end
+
+        return lines
+    end
+    local ebooklinecount = 0
+    local allLines = {}
+    for paragraph in ebookcontent:gmatch("[^\r\n]+") do
+        local lines = split_text_by_word(paragraph, 42)
+        for _, l in ipairs(lines) do
+            ebooklinecount = ebooklinecount + 1
+            table.insert(allLines, l)
         end
     end
-    if currentline ~= "" then
-        table.insert(ebooknamelinelist, currentline)
+
+    local linesPerPage = 100
+    local totalPages = math.ceil(#allLines / linesPerPage)
+    local currentPage = math.max(1, math.min(page or 1, totalPages))
+    local startIdx = (currentPage - 1) * linesPerPage + 1
+    local endIdx = math.min(startIdx + linesPerPage - 1, #allLines)
+
+    for i = startIdx, endIdx do
+        local contentLabel = gui:label(titleList, 0, 0, 290, 18)
+        contentLabel:setFontSize(16)
+        contentLabel:setText(allLines[i])
     end
-    
-    local ebooklinecount = 0
-    for i, ebookline in ipairs(ebooklinelist) do
-        ebooklinecount = ebooklinecount + 1
-        local content = gui:label(list4, 0, 0, 290, 18)
-        content:setText(ebookline)
-        content:setFontSize(16)
+
+    if totalPages > 1 then
+        if currentPage > 1 then
+            local prevBtn = gui:label(titleList, 10, 30, 80, 30)
+            prevBtn:setText("previous")
+            prevBtn:onClick(function() readebook(bookpath, currentPage - 1) end)
+        end
+
+        if currentPage < totalPages then
+            local nextBtn = gui:label(titleList, 220, 0, 80, 30)
+            nextBtn:setText("next")
+            nextBtn:onClick(function() readebook(bookpath, currentPage + 1) end)
+        end
     end
 
     local totaltime = (time:monotonic() - starttime) / 1000
-
-    local estimatedramusage = (ebooklinecount + ebooknamelinecount + 4) * 2 -- add + 4 to include the ram usage & vlist (it counts as an object)
+    local estimatedramusage = (ebooklinecount + 6) * 2 -- add + 6 to include the ram usage, title & vlist (it counts as an object)
     local estimatedrampercentageusage = estimatedramusage / 40000
     local estimatedusage = gui:label(win7, 0, 430, 290, 18)
     estimatedusage:setText("estimated "..estimatedramusage.."bytes of ram used ("..estimatedrampercentageusage.."%)")
@@ -194,6 +204,9 @@ function readebook(bookpath)
     local loadedtime = gui:label(win7, 0, 443, 290, 18)
     loadedtime:setText("loaded in "..totaltime.."s")
     loadedtime:setFontSize(13)
+    local thanks = gui:label(win7, 0, 456, 290, 18)
+    thanks:setText("thanks to MFajMaz for repairing the ebook reader")
+    thanks:setFontSize(13)
 
     gui:setWindow(win7)
 end
@@ -208,34 +221,34 @@ function estimateramusage(bookpath)
     for i = 1, #string.sub(bookpath,14,#bookpath-4) do
         characteri = characteri + 1
         if characteri == 27 then
+            currentline = ""
             ebooknamelinecount = ebooknamelinecount + 1
             characteri = 1
         end
     end
-    if currentline ~= "" then
-        ebooknamelinecount = ebooknamelinecount + 1
-    end
+    ebooknamelinecount = ebooknamelinecount + 1
 
     local ebook = storage:file(bookpath, 0)
     ebook:open()
     local ebookcontent = ebook:readAll()
     ebook:close()
 
-    local characteri = 0 -- 42 characters max per line
+    local characteri = 0 -- 35 characters max per line
     local ebooklinecount = 0
     for i = 1, #ebookcontent do
+        local char = string.sub(ebookcontent, i, i)
         characteri = characteri + 1
-        if characteri == 43 then
-            characteri = 1
-            ebooklinecount = ebooklinecount + 1
-        elseif char == "\n" then
+        if char == "\n" then
             characteri = 0
             ebooklinecount = ebooklinecount + 1
+            currentline = ""
+        elseif characteri == 36 then
+            characteri = 1
+            ebooklinecount = ebooklinecount + 1
+            currentline = ""
         end
     end
-    if currentline ~= "" then
-        table.insert(ebooknamelinelist, currentline)
-    end
+    ebooklinecount = ebooklinecount + 1
     local totaltime = (time:monotonic() - starttime) / 1000
     local estimatedramusage = (ebooklinecount + ebooknamelinecount + 4) * 2 -- add + 4 to include the ram usage & vlist (it counts as an object)
     local estimatedrampercentageusage = estimatedramusage / 40000
@@ -252,9 +265,6 @@ end
 
 function ebooks(estimateram)
     win6=gui:window()
-    gui:showWarningMessage("E-books that use >3056B of ram usage aren't supported yet.")
-    gui:showWarningMessage("Make sure to use small e-books that use around 3056B or less.")
-    gui:showWarningMessage("Using e-books that use larger than 3056B will make the phone lag(>100kb) and the reader glitch.")
     local title=gui:label(win6, 10, 10, 288, 28)
     title:setFontSize(17)
     title:setText("e-books")
@@ -283,7 +293,7 @@ function ebooks(estimateram)
         local name = gui:label(case, 0, 0, 230, 18)
         name:setText(bookname)
         name:setFontSize(16)
-        case:onClick(function() if estimateram==0 then readebook(bookpath) else estimateramusage(bookpath) end end)
+        case:onClick(function() if estimateram==0 then readebook(bookpath, 1) else estimateramusage(bookpath) end end)
     end
     gui:setWindow(win6)
 end
